@@ -174,21 +174,25 @@ export default function OrderForm({ orderIdToLoad, onBack, onSaved }: OrderFormP
     defaultValues,
   })
 
-  const { fields, append, remove } = useFieldArray({
+  const fieldArray = useFieldArray({
     name: 'lines',
     control,
   })
+  type LineField = OrderFormValues['lines'][number] & { id: string }
+  const fields = fieldArray.fields as LineField[]
+  const append = fieldArray.append
+  const remove = fieldArray.remove
 
-  const lines = useWatch({ control, name: 'lines' }) ?? []
+  const lines = (useWatch({ control, name: 'lines' }) as OrderFormValues['lines']) ?? []
   const orderTotals = useMemo(() => {
-    const totals = lines.map((line) => {
+    const totals = lines.map((line: OrderFormValues['lines'][number]) => {
       const qty = Number(line.quantity || 0)
       const price = Number(line.unitPrice || 0)
       const discount = Number(line.discountPct || 0) / 100
       const total = qty * price * (1 - discount)
       return Number.isFinite(total) ? total : 0
     })
-    const orderTotal = totals.reduce((acc, v) => acc + v, 0)
+    const orderTotal = totals.reduce((acc: number, v: number) => acc + v, 0)
     return { lineTotals: totals, orderTotal }
   }, [lines])
 
@@ -422,7 +426,7 @@ export default function OrderForm({ orderIdToLoad, onBack, onSaved }: OrderFormP
                       <Controller
                         control={control}
                         name={`lines.${index}.productId`}
-                        render={({ field: productField }) => (
+                        render={({ field: productField }: { field: any }) => (
                           <Select
                             value={productField.value || ""}
                             disabled={isConfirmed || loading}
@@ -452,7 +456,7 @@ export default function OrderForm({ orderIdToLoad, onBack, onSaved }: OrderFormP
                         <Controller
                           control={control}
                           name={`lines.${index}.quantity`}
-                          render={({ field: quantityField }) => (
+                          render={({ field: quantityField }: { field: any }) => (
                             <Input
                               type="number"
                               min="1"
@@ -481,7 +485,7 @@ export default function OrderForm({ orderIdToLoad, onBack, onSaved }: OrderFormP
                         <Controller
                           control={control}
                           name={`lines.${index}.discountPct`}
-                          render={({ field: discountField }) => (
+                          render={({ field: discountField }: { field: any }) => (
                             <Input
                               type="number"
                               step="0.1"
@@ -533,7 +537,7 @@ export default function OrderForm({ orderIdToLoad, onBack, onSaved }: OrderFormP
                         <Controller
                           control={control}
                           name={`lines.${index}.productId`}
-                          render={({ field: productField }) => (
+                          render={({ field: productField }: { field: any }) => (
                             <Select
                               value={productField.value || ""}
                               disabled={isConfirmed || loading}
@@ -560,7 +564,7 @@ export default function OrderForm({ orderIdToLoad, onBack, onSaved }: OrderFormP
                         <Controller
                           control={control}
                           name={`lines.${index}.quantity`}
-                          render={({ field: quantityField }) => (
+                          render={({ field: quantityField }: { field: any }) => (
                             <Input
                               type="number"
                               min="1"
@@ -584,7 +588,7 @@ export default function OrderForm({ orderIdToLoad, onBack, onSaved }: OrderFormP
                         <Controller
                           control={control}
                           name={`lines.${index}.discountPct`}
-                          render={({ field: discountField }) => (
+                          render={({ field: discountField }: { field: any }) => (
                             <Input
                               type="number"
                               step="0.1"
