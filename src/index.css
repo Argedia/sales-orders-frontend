@@ -54,6 +54,19 @@ body {
   min-height: 100vh;
 }
 
+/* Evita zoom y bloqueos de foco en iOS cuando el tamaño de letra es menor a 16px */
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 .card {
   background: white;
   border: 1px solid #e2e8f0;

@@ -10,7 +10,7 @@ function App() {
   const subtitle =
     tab === "orders"
       ? "Crea, edita y cancela pedidos de repuestos."
-      : "Agrega y consulta clientes con datos de contacto y facturación."
+      : "Agrega, edita y consulta clientes."
 
   return (
     <div className="min-h-screen px-4 py-8 sm:px-8 lg:px-16">

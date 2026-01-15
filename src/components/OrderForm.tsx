@@ -1,6 +1,6 @@
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react"
-import { useEffect, useMemo, useState } from "react"
-import { useFieldArray, useForm, useWatch, type FieldErrors } from "react-hook-form"
+import { forwardRef, useEffect, useMemo, useState } from "react"
+import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 import { z } from "zod"
@@ -93,30 +93,37 @@ const defaultValues: OrderFormValues = {
 
 type BadgeVariant = "neutral" | "success" | "warning"
 
-const Input = ({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) => (
-  <input
-    className={clsx(
-      "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-base sm:text-sm text-slate-900 shadow-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-100 disabled:bg-slate-100 disabled:text-slate-500",
-      className,
-    )}
-    {...props}
-  />
-)
+const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input(
+  { className, ...props },
+  ref,
+) {
+  return (
+    <input
+      ref={ref}
+      className={clsx(
+        "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-base sm:text-sm text-slate-900 shadow-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-100 disabled:bg-slate-100 disabled:text-slate-500",
+        className,
+      )}
+      {...props}
+    />
+  )
+})
 
-const Select = ({
-  className,
-  children,
-  ...props
-}: SelectHTMLAttributes<HTMLSelectElement> & { children: ReactNode }) => (
-  <select
-    className={clsx(
-      "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-base sm:text-sm text-slate-900 shadow-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-100 disabled:bg-slate-100 disabled:text-slate-500",
-      className,
-    )}
-    {...props}
-  >
-    {children}
-  </select>
+const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement> & { children: ReactNode }>(
+  function Select({ className, children, ...props }, ref) {
+    return (
+      <select
+        ref={ref}
+        className={clsx(
+          "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-base sm:text-sm text-slate-900 shadow-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-100 disabled:bg-slate-100 disabled:text-slate-500",
+          className,
+        )}
+        {...props}
+      >
+        {children}
+      </select>
+    )
+  },
 )
 
 const Card = ({
@@ -322,7 +329,7 @@ export default function OrderForm({ orderIdToLoad, onBack, onSaved }: OrderFormP
   const addLine = () => append({ productId: '', quantity: 1, unitPrice: 0, discountPct: 0 })
 
   const renderLineErrors = (lineIndex: number, fieldName: keyof OrderFormValues['lines'][number]) => {
-    const message = (errors as FieldErrors<OrderFormValues>)?.lines?.[lineIndex]?.[fieldName]?.message
+    const message = errors.lines?.[lineIndex]?.[fieldName]?.message
     return message ? <p className="text-xs text-red-600 mt-1">{String(message)}</p> : null
   }
 
@@ -392,10 +399,9 @@ export default function OrderForm({ orderIdToLoad, onBack, onSaved }: OrderFormP
         >
           {errors.lines?.message && <p className="text-sm text-red-600 mb-2">{errors.lines.message}</p>}
 
-          {/* Mobile cards */}
-          <div className="md:hidden space-y-3">
+          {/* Tarjetas móviles (iOS friendly) */}
+          <div className="md:hidden space-y-3 touch-manipulation">
             {fields.map((field, index) => {
-              const productField = register(`lines.${index}.productId`)
               return (
                 <div key={field.id} className="rounded-lg border border-slate-200 p-3 bg-white shadow-sm">
                   <div className="flex justify-between items-center mb-2">
@@ -413,32 +419,52 @@ export default function OrderForm({ orderIdToLoad, onBack, onSaved }: OrderFormP
                   <div className="space-y-3">
                     <div>
                       <label className="text-xs font-medium text-slate-700">Producto</label>
-                      <Select
-                        defaultValue={field.productId}
-                        disabled={isConfirmed || loading}
-                        {...productField}
-                        onChange={(e) => {
-                          productField.onChange(e)
-                          handleProductSelect(index, e.target.value)
-                        }}
-                      >
-                        <option value="">Selecciona...</option>
-                        {products.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.code} - {p.name}
-                          </option>
-                        ))}
-                      </Select>
+                      <Controller
+                        control={control}
+                        name={`lines.${index}.productId`}
+                        render={({ field: productField }) => (
+                          <Select
+                            value={productField.value || ""}
+                            disabled={isConfirmed || loading}
+                            className="pointer-events-auto"
+                            onChange={(e) => {
+                              productField.onChange(e.target.value)
+                              handleProductSelect(index, e.target.value)
+                            }}
+                            onBlur={productField.onBlur}
+                            name={productField.name}
+                            ref={productField.ref}
+                          >
+                            <option value="">Selecciona...</option>
+                            {products.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.code} - {p.name}
+                              </option>
+                            ))}
+                          </Select>
+                        )}
+                      />
                       {renderLineErrors(index, 'productId')}
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <label className="text-xs font-medium text-slate-700">Cantidad</label>
-                        <Input
-                          type="number"
-                          min="1"
-                          disabled={isConfirmed || loading}
-                          {...register(`lines.${index}.quantity`)}
+                        <Controller
+                          control={control}
+                          name={`lines.${index}.quantity`}
+                          render={({ field: quantityField }) => (
+                            <Input
+                              type="number"
+                              min="1"
+                              disabled={isConfirmed || loading}
+                              className="pointer-events-auto"
+                              value={quantityField.value ?? ""}
+                              onChange={(e) => quantityField.onChange(e.target.value)}
+                              onBlur={quantityField.onBlur}
+                              name={quantityField.name}
+                              ref={quantityField.ref}
+                            />
+                          )}
                         />
                         {renderLineErrors(index, 'quantity')}
                       </div>
@@ -452,13 +478,24 @@ export default function OrderForm({ orderIdToLoad, onBack, onSaved }: OrderFormP
                     <div className="grid grid-cols-2 gap-2 items-center">
                       <div>
                         <label className="text-xs font-medium text-slate-700">% Descuento</label>
-                        <Input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="100"
-                          disabled={isConfirmed || loading}
-                          {...register(`lines.${index}.discountPct`)}
+                        <Controller
+                          control={control}
+                          name={`lines.${index}.discountPct`}
+                          render={({ field: discountField }) => (
+                            <Input
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              max="100"
+                              disabled={isConfirmed || loading}
+                              className="pointer-events-auto"
+                              value={discountField.value ?? ""}
+                              onChange={(e) => discountField.onChange(e.target.value)}
+                              onBlur={discountField.onBlur}
+                              name={discountField.name}
+                              ref={discountField.ref}
+                            />
+                          )}
                         />
                         {renderLineErrors(index, 'discountPct')}
                       </div>
@@ -475,7 +512,7 @@ export default function OrderForm({ orderIdToLoad, onBack, onSaved }: OrderFormP
             })}
           </div>
 
-          {/* Desktop table */}
+          {/* Tabla desktop / tablets */}
           <div className="hidden md:block overflow-x-auto border border-slate-200 rounded-lg">
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50 text-left text-xs font-semibold text-slate-600">
@@ -490,34 +527,51 @@ export default function OrderForm({ orderIdToLoad, onBack, onSaved }: OrderFormP
               </thead>
               <tbody>
                 {fields.map((field, index) => {
-                  const productField = register(`lines.${index}.productId`)
                   return (
                     <tr key={field.id} className="border-t border-slate-100">
                       <td className="px-3 py-2">
-                        <Select
-                          defaultValue={field.productId}
-                          disabled={isConfirmed || loading}
-                          {...productField}
-                          onChange={(e) => {
-                            productField.onChange(e)
-                            handleProductSelect(index, e.target.value)
-                          }}
-                        >
-                          <option value="">Selecciona...</option>
-                          {products.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.code} - {p.name}
-                            </option>
-                          ))}
-                        </Select>
+                        <Controller
+                          control={control}
+                          name={`lines.${index}.productId`}
+                          render={({ field: productField }) => (
+                            <Select
+                              value={productField.value || ""}
+                              disabled={isConfirmed || loading}
+                              onChange={(e) => {
+                                productField.onChange(e.target.value)
+                                handleProductSelect(index, e.target.value)
+                              }}
+                              onBlur={productField.onBlur}
+                              name={productField.name}
+                              ref={productField.ref}
+                            >
+                              <option value="">Selecciona...</option>
+                              {products.map((p) => (
+                                <option key={p.id} value={p.id}>
+                                  {p.code} - {p.name}
+                                </option>
+                              ))}
+                            </Select>
+                          )}
+                        />
                         {renderLineErrors(index, 'productId')}
                       </td>
                       <td className="px-3 py-2 align-top">
-                        <Input
-                          type="number"
-                          min="1"
-                          disabled={isConfirmed || loading}
-                          {...register(`lines.${index}.quantity`)}
+                        <Controller
+                          control={control}
+                          name={`lines.${index}.quantity`}
+                          render={({ field: quantityField }) => (
+                            <Input
+                              type="number"
+                              min="1"
+                              disabled={isConfirmed || loading}
+                              value={quantityField.value ?? ""}
+                              onChange={(e) => quantityField.onChange(e.target.value)}
+                              onBlur={quantityField.onBlur}
+                              name={quantityField.name}
+                              ref={quantityField.ref}
+                            />
+                          )}
                         />
                         {renderLineErrors(index, 'quantity')}
                       </td>
@@ -527,13 +581,23 @@ export default function OrderForm({ orderIdToLoad, onBack, onSaved }: OrderFormP
                         {renderLineErrors(index, 'unitPrice')}
                       </td>
                       <td className="px-3 py-2 align-top">
-                        <Input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="100"
-                          disabled={isConfirmed || loading}
-                          {...register(`lines.${index}.discountPct`)}
+                        <Controller
+                          control={control}
+                          name={`lines.${index}.discountPct`}
+                          render={({ field: discountField }) => (
+                            <Input
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              max="100"
+                              disabled={isConfirmed || loading}
+                              value={discountField.value ?? ""}
+                              onChange={(e) => discountField.onChange(e.target.value)}
+                              onBlur={discountField.onBlur}
+                              name={discountField.name}
+                              ref={discountField.ref}
+                            />
+                          )}
                         />
                         {renderLineErrors(index, 'discountPct')}
                       </td>
